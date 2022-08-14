@@ -1,12 +1,12 @@
 ###############################################################################
-# frame.py
+# Msg.py
 ###############################################################################
 # This makes the frame that contains the message, error check and error
 # correcting codes.
 ###############################################################################
 from collections import OrderedDict
 
-class Frame(object):
+class Msg(object):
     def __init__(self):
         print("Frame created")
         self.reset()
