@@ -1,19 +1,27 @@
 ###############################################################################
 # Msg.py
 ###############################################################################
-# This makes the frame that contains the message, error check and error
-# correcting codes.
+# This makes a message that hashes the call sign and other info.
 ###############################################################################
 from collections import OrderedDict
+import copy
 
 class Msg(object):
     def __init__(self):
-        print("Frame created")
-        self.reset()
-
-    def reset(self):
         msg_enc = 0     # encoded message
         msg_pnt = 77    # message pointer
+
+    def _get_bit_field(self, length):
+        """
+        Returns the left most bit field pointed by msg_pnt
+        :param length:
+        :return:
+        """
+        self.msg_pnt -= length
+        bit_field = (2**length - 1) << self.msg_pnt
+        ans = bit_field & self.msg_enc
+        ans = ans >> self.msg_pnt
+        return ans
 
     def _set_bit_field(self, data, length):
         """
@@ -30,85 +38,103 @@ class Msg(object):
             raise ValueError('Bad bit length')
         self.msg_enc = self.msg_enc | (data << self.msg_pnt)
 
-    def message_encode(self, msg):
+    def message_encode(self, data):
         """
         Package the message in a 77-bit message
 
-        :param msg:     orderedDict
+        :param data:     orderedDict
         :return:
         """
-        self._set_bit_field(msg["type"], 3)
+        self._set_bit_field(data["type"], 3)
 
-        if msg["type"] == 0b000:
-            self._set_bit_field(msg["subtype"], 3)
+        if data["type"] == 0b000:
+            self._set_bit_field(data["subtype"], 3)
 
-            if msg["subtype"] == 0b000:
+            if data["subtype"] == 0b000:
                 # Free text
-                self._set_bit_field(msg["f71"], 71)
+                self._set_bit_field(data["f71"], 71)
 
-            elif msg["subtype"] == 0b001:
+            elif data["subtype"] == 0b001:
                 # DXpedition
-                self._set_bit_field(msg["c28a"], 28)
-                self._set_bit_field(msg["c28b"], 28)
-                self._set_bit_field(msg["h10"], 10)
-                self._set_bit_field(msg["r5"], 5)
+                self._set_bit_field(data["c28a"], 28)
+                self._set_bit_field(data["c28b"], 28)
+                self._set_bit_field(data["h10"], 10)
+                self._set_bit_field(data["r5"], 5)
 
-            elif (msg["subtype"] == 0b010) or (msg["subtype"] == 0b011):
+            elif (data["subtype"] == 0b010) or (data["subtype"] == 0b011):
                 # field day
-                self._set_bit_field(msg["c28a"], 28)
-                self._set_bit_field(msg["c28b"], 28)
-                self._set_bit_field(msg["r1"], 1)
-                self._set_bit_field(msg["n4"], 4)
-                self._set_bit_field(msg["k3"], 3)
-                self._set_bit_field(msg["s7"], 7)
+                self._set_bit_field(data["c28a"], 28)
+                self._set_bit_field(data["c28b"], 28)
+                self._set_bit_field(data["r1"], 1)
+                self._set_bit_field(data["n4"], 4)
+                self._set_bit_field(data["k3"], 3)
+                self._set_bit_field(data["s7"], 7)
 
-            elif msg["subtype"] == 0b001:
+            elif data["subtype"] == 0b001:
                 # Telemetry
-                self._set_bit_field(msg["t71"], 71)
+                self._set_bit_field(data["t71"], 71)
 
-        elif msg["type"] == 0b001:
-            # std msg
-            self._set_bit_field(msg["c28a"], 28)
-            self._set_bit_field(msg["r1a"], 1)
-            self._set_bit_field(msg["c28b"], 28)
-            self._set_bit_field(msg["r1b"], 1)
-            self._set_bit_field(msg["r1c"], 1)
-            self._set_bit_field(msg["g15"], 15)
+        elif data["type"] == 0b001:
+            # std data
+            self._set_bit_field(data["c28a"], 28)
+            self._set_bit_field(data["r1a"], 1)
+            self._set_bit_field(data["c28b"], 28)
+            self._set_bit_field(data["r1b"], 1)
+            self._set_bit_field(data["r1c"], 1)
+            self._set_bit_field(data["g15"], 15)
 
-        elif msg["type"] == 0b010:
+        elif data["type"] == 0b010:
             # EU VHF
-            self._set_bit_field(msg["c28a"], 28)
-            self._set_bit_field(msg["p1a"], 1)
-            self._set_bit_field(msg["c28b"], 28)
-            self._set_bit_field(msg["p1b"], 1)
-            self._set_bit_field(msg["r1"], 1)
-            self._set_bit_field(msg["g15"], 15)
+            self._set_bit_field(data["c28a"], 28)
+            self._set_bit_field(data["p1a"], 1)
+            self._set_bit_field(data["c28b"], 28)
+            self._set_bit_field(data["p1b"], 1)
+            self._set_bit_field(data["r1"], 1)
+            self._set_bit_field(data["g15"], 15)
 
-        elif msg["type"] == 0b011:
+        elif data["type"] == 0b011:
             # RTTY RU
-            self._set_bit_field(msg["t1"], 1)
-            self._set_bit_field(msg["c28a"], 28)
-            self._set_bit_field(msg["c28a"], 28)
-            self._set_bit_field(msg["r1"], 1)
-            self._set_bit_field(msg["r3"], 3)
-            self._set_bit_field(msg["s13"], 13)
+            self._set_bit_field(data["t1"], 1)
+            self._set_bit_field(data["c28a"], 28)
+            self._set_bit_field(data["c28a"], 28)
+            self._set_bit_field(data["r1"], 1)
+            self._set_bit_field(data["r3"], 3)
+            self._set_bit_field(data["s13"], 13)
 
-        elif msg["type"] == 0b100:
+        elif data["type"] == 0b100:
             # nonstd call
-            self._set_bit_field(msg["h12"], 12)
-            self._set_bit_field(msg["c58"], 58)
-            self._set_bit_field(msg["h1"], 1)
-            self._set_bit_field(msg["r2"], 2)
-            self._set_bit_field(msg["c1"], 1)
+            self._set_bit_field(data["h12"], 12)
+            self._set_bit_field(data["c58"], 58)
+            self._set_bit_field(data["h1"], 1)
+            self._set_bit_field(data["r2"], 2)
+            self._set_bit_field(data["c1"], 1)
 
-        elif msg["type"] == 0b101:
+        elif data["type"] == 0b101:
             # nonstd call
-            self._set_bit_field(msg["h12"], 12)
-            self._set_bit_field(msg["h22"], 22)
-            self._set_bit_field(msg["r1"], 1)
-            self._set_bit_field(msg["r3"], 3)
-            self._set_bit_field(msg["s11"], 11)
-            self._set_bit_field(msg["g25"], 25)
+            self._set_bit_field(data["h12"], 12)
+            self._set_bit_field(data["h22"], 22)
+            self._set_bit_field(data["r1"], 1)
+            self._set_bit_field(data["r3"], 3)
+            self._set_bit_field(data["s11"], 11)
+            self._set_bit_field(data["g25"], 25)
+
+    def message_decode(self, msg):
+        """
+        returns an OrderDict with the data in msg
+        :param msg:
+        :return:
+        """
+        msg_pnt = 77
+        ans = OrderedDict()
+
+        ans["type"] = self._get_bit_field(3)
+        if ans["type"] == 0b000:
+            ans["subtype"] = self._get_bit_field(3)
+            if ans["subtype"] == 0b000:
+                ans["f71"] = self._get_bit_field(71)
+
+
+
 
 
 
