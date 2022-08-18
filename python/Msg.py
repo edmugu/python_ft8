@@ -52,6 +52,27 @@ class Msg(object):
             raise ValueError('Bad bit length')
         self.msg_enc = self.msg_enc | (data << self.msg_pnt)
 
+    def get_message_template(self, type, subtype=0b000):
+        """
+        It looks at the message type table and returns the message type.
+
+        :param type:
+        :param subtype:
+        :return:
+        """
+        possible_msg = list(filter(lambda x: x[1], type))
+        if len(possible_msg) == 0:
+            raise ValueError(f"Bad message type {type}")
+
+        if len(possible_msg) >= 2:
+            possible_msg = list(filter(lambda x: x[2], subtype))
+
+            if len(possible_msg) == 0:
+                raise ValueError(f"Bad message subtype {subtype}")
+
+        return possible_msg[0]
+
+
     def raw_message_encode(self, data):
         """
         Package the message in a 77-bit message
@@ -79,18 +100,18 @@ class Msg(object):
         :param msg:
         :return:
         """
-        msg_pnt = 77
         ans = OrderedDict()
+        self.msg_pnt -= length
+        self.msg_enc -= msg
+
+        msg_type = msg & (0b11 << 74)
+        msg_subtype = msg & (0b11 << 71)
+        msg_fields = self.get_message_template(msg_type, msg_subtype)
+
         ans["type"] = self._get_bit_field(3)
-
-        if ans["type"] == 0b000:
-            ans["subtype"] = self._get_bit_field(3)
-            if ans["subtype"] == 0b000:
-                ans["f71"] = self._get_bit_field(71)
-
-
-
-
-
-
-
+        for i, f in enumerate(msg_fields[2:len(msg_fields)]):
+            if (i == 0) and isinstance(f, Int):
+                ans["subtype"] = self._get_bit_field(3)
+            else:
+                field_len =  re.findall(r'\d+', f)[0]
+                ans[f] = self._get_bit_field(field_len)
