@@ -3,6 +3,8 @@
 ###############################################################################
 # This makes the frame that contains the message, error check and error
 # correcting codes.
+#
+# This is cover on section 2 of protocol
 ###############################################################################
 from collections import OrderedDict
 
