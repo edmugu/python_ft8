@@ -7,111 +7,58 @@
 # This is cover on section 2 of protocol
 ###############################################################################
 from collections import OrderedDict
+import numpy as np
+import pyldpc
+import Msg
+import crc
+
 
 class Frame(object):
+    """
+    A frame that contains a message and the error detecting and correcting of FT8
+    """
     def __init__(self):
+
+        ###################################################
+        # Builds a Crc function for Frame
+        ###################################################
+        configuration = crcConfiguration(
+            width=14,
+            poly=0x6757,
+            init_value=0x00,
+            final_xor_value=0x00,
+            reverse_input=False,
+            reverse_output=False
+        )
+        self.crc_calculator = crc.CrcCalculator(configuration, use_table=False)
+
+        ###################################################
+        # Builds a LDPC function for Frame
+        ###################################################
+        n = 15
+        d_v = 4
+        d_c = 5
+        snr = 100
+        H, G = pyldpc.make_ldpc(n, d_v, d_c, systematic=True, sparse=True)
+        k = G.shape[1]
+        v = np.random.randint(2, size=k)
+        y = pyldcp.encode(G, v, snr)
+        d = decode(H, y, snr)
+        x = get_message(G, d)
+
+
+        self.frame = OrderedDict()
+        self.frame["msg"] = Msg.Msg()
+        self.frame["crc"] = 2**14 - 1  # 14-bit crc
+        self.frame["ldpc"] = 2**83 - 1 # 83-bit ldpc
         print("Frame created")
-        self.reset()
 
-    def reset(self):
-        msg_enc = 0     # encoded message
-        msg_pnt = 77    # message pointer
-
-    def _set_bit_field(self, data, length):
+    def calculate_crc(self):
         """
-        This will set the leftmost [or MSB] of the message
-        :param data:    data to fill
-        :param length:  length of the bit field
-        :return:        None
-        """
-        self.msg_pnt -= length
-        if self.msg_pnt < 0:
-            raise ValueError('message overflow')
-        max_value = 2**length - 1
-        if not((max_value >= data) and (data >= 0)):
-            raise ValueError('Bad bit length')
-        self.msg_enc = self.msg_enc | (data << self.msg_pnt)
-
-    def message_encode(self, msg):
-        """
-        Package the message in a 77-bit message
-
-        :param msg:     orderedDict
+        This adds the 14-bit cyclic redundancy check to the frame
         :return:
         """
-        self._set_bit_field(msg["type"], 3)
-
-        if msg["type"] == 0b000:
-            self._set_bit_field(msg["subtype"], 3)
-
-            if msg["subtype"] == 0b000:
-                # Free text
-                self._set_bit_field(msg["f71"], 71)
-
-            elif msg["subtype"] == 0b001:
-                # DXpedition
-                self._set_bit_field(msg["c28a"], 28)
-                self._set_bit_field(msg["c28b"], 28)
-                self._set_bit_field(msg["h10"], 10)
-                self._set_bit_field(msg["r5"], 5)
-
-            elif (msg["subtype"] == 0b010) or (msg["subtype"] == 0b011):
-                # field day
-                self._set_bit_field(msg["c28a"], 28)
-                self._set_bit_field(msg["c28b"], 28)
-                self._set_bit_field(msg["r1"], 1)
-                self._set_bit_field(msg["n4"], 4)
-                self._set_bit_field(msg["k3"], 3)
-                self._set_bit_field(msg["s7"], 7)
-
-            elif msg["subtype"] == 0b001:
-                # Telemetry
-                self._set_bit_field(msg["t71"], 71)
-
-        elif msg["type"] == 0b001:
-            # std msg
-            self._set_bit_field(msg["c28a"], 28)
-            self._set_bit_field(msg["r1a"], 1)
-            self._set_bit_field(msg["c28b"], 28)
-            self._set_bit_field(msg["r1b"], 1)
-            self._set_bit_field(msg["r1c"], 1)
-            self._set_bit_field(msg["g15"], 15)
-
-        elif msg["type"] == 0b010:
-            # EU VHF
-            self._set_bit_field(msg["c28a"], 28)
-            self._set_bit_field(msg["p1a"], 1)
-            self._set_bit_field(msg["c28b"], 28)
-            self._set_bit_field(msg["p1b"], 1)
-            self._set_bit_field(msg["r1"], 1)
-            self._set_bit_field(msg["g15"], 15)
-
-        elif msg["type"] == 0b011:
-            # RTTY RU
-            self._set_bit_field(msg["t1"], 1)
-            self._set_bit_field(msg["c28a"], 28)
-            self._set_bit_field(msg["c28a"], 28)
-            self._set_bit_field(msg["r1"], 1)
-            self._set_bit_field(msg["r3"], 3)
-            self._set_bit_field(msg["s13"], 13)
-
-        elif msg["type"] == 0b100:
-            # nonstd call
-            self._set_bit_field(msg["h12"], 12)
-            self._set_bit_field(msg["c58"], 58)
-            self._set_bit_field(msg["h1"], 1)
-            self._set_bit_field(msg["r2"], 2)
-            self._set_bit_field(msg["c1"], 1)
-
-        elif msg["type"] == 0b101:
-            # nonstd call
-            self._set_bit_field(msg["h12"], 12)
-            self._set_bit_field(msg["h22"], 22)
-            self._set_bit_field(msg["r1"], 1)
-            self._set_bit_field(msg["r3"], 3)
-            self._set_bit_field(msg["s11"], 11)
-            self._set_bit_field(msg["g25"], 25)
-
-
+        data = self.frame["crc"].msg_enc
+        self.frame["crc"] = self.crc_calculator.calculate_checksum(data)
 
 
