@@ -8,6 +8,9 @@ import copy
 import re
 
 class Msg(object):
+    """
+    This is data that is transmitted on each frame. That is no preamble nor crc.
+    """
     type_list = [
         ["free Text", 0b000, 0b000, "n3", "f71"],
         ["DXpedition", 0b000, 0b001, "n3", "c28a", "c28b", "h10", "r5"],
