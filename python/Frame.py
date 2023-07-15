@@ -118,11 +118,12 @@ class Frame(Bitfield.Bitfield):
         tmp = self.get_bit_array()
         msg_crc = pyldpc.get_message(self.ldpc_G, tmp)
 
-        msg_crc_bitfield = Bitfield.Bitfield(msg_crc, bit_length=91)
-        msg_bitfield = msg_crc_bitfield.get_bitfield([76, 0])
-        crc_bitfield = msg_crc_bitfield.get_bitfield([90, 77])
+        msg_crc_bitfield = Bitfield.Bitfield(Bitfield.msg_crc_length)
+        msg_crc_bitfield.set_value(msg_crc)
+        msg_bitfield = msg_crc_bitfield.get_bitfield(Bitfield.msg_field)
+        crc_bitfield = msg_crc_bitfield.get_bitfield(Bitfield.crc_field)
 
         crc_expected = self.crc_calculator.checksum(msg_bitfield)
         if crc_bitfield != crc_expected:
-            print(f"Error encounter during decoding bitfield {bitfield}")
+            print(f"Error encounter during decoding bitfield {self}")
             self.frame["status"] = "decoded with errors"

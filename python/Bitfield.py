@@ -5,16 +5,16 @@
 ###############################################################################
 import random
 
-msg_length = 77
-crc_length = 14
-ecc_length = 83
-frm_length = 174
+msg_len = 77
+crc_len = 14
+ecc_len = 83
+frm_len = 174
 
-msg_field = [msg_length - 1, 0]
-crc_field = [msg_length + crc_length - 1, msg_length]
-ecc_field = [ecc_length + max(crc_field), max(crc_field) + 1]
+msg_field = [msg_len - 1, 0]
+crc_field = [msg_len + crc_len - 1, msg_len]
+ecc_field = [ecc_len + max(crc_field), max(crc_field) + 1]
 
-msg_crc_length = msg_length + crc_length
+msg_crc_length = msg_len + crc_len
 msg_crc_field = [max(crc_field), 0]
 
 

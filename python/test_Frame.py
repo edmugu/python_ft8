@@ -18,4 +18,4 @@ class TestDecode(TestFrame):
         test_frame = Frame.Frame()
         test_frame.decode_bitfield(self.frame.get_bitfield())
 
-        self.assertEquals(self.msg_bitfield, test_frame)
+        self.assertEquals(self.frame, test_frame)
