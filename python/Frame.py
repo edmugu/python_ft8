@@ -21,7 +21,7 @@ class Frame(Bitfield.Bitfield):
     """
 
     def __init__(self):
-        super().__init__(Bitfield.frm_length)
+        super().__init__(Bitfield.frm_len)
         ###################################################
         # Builds a Crc function for Frame
         ###################################################
@@ -119,11 +119,11 @@ class Frame(Bitfield.Bitfield):
         msg_crc = pyldpc.get_message(self.ldpc_G, tmp)
 
         msg_crc_bitfield = Bitfield.Bitfield(Bitfield.msg_crc_length)
-        msg_crc_bitfield.set_value(msg_crc)
-        msg_bitfield = msg_crc_bitfield.get_bitfield(Bitfield.msg_field)
-        crc_bitfield = msg_crc_bitfield.get_bitfield(Bitfield.crc_field)
+        msg_crc_bitfield.set_bit_array(msg_crc)
+        msg_bits = msg_crc_bitfield.get_bit_array(Bitfield.msg_field)
+        crc_value = msg_crc_bitfield.get_bitfield(Bitfield.crc_field)
 
-        crc_expected = self.crc_calculator.checksum(msg_bitfield)
-        if crc_bitfield != crc_expected:
+        crc_expected = self.crc_calculator.checksum(msg_bits)
+        if crc_value != crc_expected:
             print(f"Error encounter during decoding bitfield {self}")
             self.frame["status"] = "decoded with errors"

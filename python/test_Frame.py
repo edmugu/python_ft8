@@ -7,7 +7,7 @@ import Frame
 class TestFrame(unittest.TestCase):
     def setUp(self):
         self.frame = Frame.Frame()
-        self.msg_bitfield = Bitfield.Bitfield(Bitfield.msg_length)
+        self.msg_bitfield = Bitfield.Bitfield(Bitfield.msg_len)
 
 class TestDecode(TestFrame):
     def test_decode_bitfield_simple_no_error(self):
